@@ -2,12 +2,38 @@ package engine
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 )
 
+// Prometheus counter
+var processedCounter = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: "packets_processed_total",
+		Help: "Total number of packets processed",
+	},
+)
+
+func init() {
+	prometheus.MustRegister(processedCounter)
+}
+
+// Engine struct
+type Engine struct {
+	workers   int
+	queue     chan []byte
+	stopped   chan struct{}
+	logger    zerolog.Logger
+	wg        sync.WaitGroup
+	processed uint64
+	stopOnce  sync.Once
+}
+
+// Constructor
 func New(workers int, logger zerolog.Logger) *Engine {
 	if workers <= 0 {
 		workers = 4
@@ -20,6 +46,7 @@ func New(workers int, logger zerolog.Logger) *Engine {
 	}
 }
 
+// Start engine workers
 func (e *Engine) Start(ctx context.Context) error {
 	for i := 0; i < e.workers; i++ {
 		e.wg.Add(1)
@@ -29,6 +56,7 @@ func (e *Engine) Start(ctx context.Context) error {
 	return nil
 }
 
+// Worker goroutine
 func (e *Engine) worker(ctx context.Context) {
 	defer e.wg.Done()
 	for {
@@ -41,24 +69,24 @@ func (e *Engine) worker(ctx context.Context) {
 	}
 }
 
+// Process a packet
 func (e *Engine) process(pkt []byte) {
-	// Simulate work: replace with real parsing/inspect/forwarding
 	time.Sleep(5 * time.Millisecond)
 	atomic.AddUint64(&e.processed, 1)
 	processedCounter.Inc()
 	e.logger.Debug().Int("len", len(pkt)).Msg("packet processed")
 }
 
-// Enqueue puts a packet into the processing queue (non-blocking)
+// Enqueue packet
 func (e *Engine) Enqueue(pkt []byte) {
 	select {
 	case e.queue <- pkt:
 	default:
-		// backpressure/drop: real product should have metrics and configurable policy
 		e.logger.Warn().Msg("queue full, dropping packet")
 	}
 }
 
+// Stop engine
 func (e *Engine) Stop() {
 	e.stopOnce.Do(func() {
 		close(e.stopped)

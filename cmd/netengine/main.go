@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/0bSyd1aN/aegis-netengine/internal/engine"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/your-org/aegis-netengine/internal/engine"
 )
 
 func main() {

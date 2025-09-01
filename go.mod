@@ -1,4 +1,4 @@
-module github.com/your-org/aegis-netengine
+module github.com/0bSyd1aN/aegis-netengine
 
 go 1.23.0
 
